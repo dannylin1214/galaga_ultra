@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galaga Ultra: Cyberpunk Edition - 超華麗進階版小蜜蜂</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app-container">
+    <div id="canvas-wrapper">
+      <canvas id="gameCanvas"></canvas>
+      <div class="crt-overlay"></div>
+
+      <!-- HUD Overlay -->
+      <div id="hud-overlay">
+        <div class="hud-top">
+          <div class="hud-card score-box">
+            <div class="label">SCORE</div>
+            <div class="value" id="score-val">000000</div>
+          </div>
+          <div class="hud-card wave-box">
+            <div class="wave-title" id="wave-val">WAVE 1</div>
+            <div class="label" id="multiplier-val" style="color: var(--neon-pink);">MULTIPLIER x1.0</div>
+          </div>
+          <div class="hud-card score-box" style="text-align: right;">
+            <div class="label">HIGH SCORE</div>
+            <div class="value" id="high-score-val" style="color: var(--neon-gold);">050000</div>
+          </div>
+        </div>
+
+        <div class="hud-bottom">
+          <div class="status-bars">
+            <div class="bar-container">
+              <span class="bar-label" style="color: var(--neon-red);">HP</span>
+              <div class="bar-outer">
+                <div class="bar-inner" id="health-bar" style="width: 100%;"></div>
+              </div>
+            </div>
+            <div class="bar-container">
+              <span class="bar-label" style="color: var(--neon-cyan);">SHIELD</span>
+              <div class="bar-outer">
+                <div class="bar-inner" id="shield-bar" style="width: 100%;"></div>
+              </div>
+            </div>
+            <div class="bar-container">
+              <span class="bar-label" style="color: var(--neon-purple);">BOMB</span>
+              <div class="bar-outer">
+                <div class="bar-inner" id="energy-bar" style="width: 100%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="weapon-info">
+            <div class="weapon-badge" id="weapon-type">LASER V1</div>
+            <div class="weapon-badge" id="mode-badge" style="border-color: var(--neon-gold); color: var(--neon-gold);">SINGLE JET</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Start Screen Modal -->
+      <div id="start-modal" class="ui-modal active">
+        <div class="modal-content" style="max-width: 620px;">
+          <h1 class="game-title">GALAGA ULTRA</h1>
+          <p class="game-subtitle">CYBERPUNK SPACE WARFARE</p>
+
+          <!-- 5 Generated AI Asset Showcase -->
+          <div class="asset-showcase">
+            <div class="asset-card">
+              <img src="assets/player_ship.jpg" alt="Player Ship">
+              <p>🚀 玩家戰機</p>
+            </div>
+            <div class="asset-card">
+              <img src="assets/enemy_drone.jpg" alt="Enemy Drone">
+              <p>🐝 蜂型偵查機</p>
+            </div>
+            <div class="asset-card">
+              <img src="assets/enemy_interceptor.jpg" alt="Interceptor">
+              <p>⚡ 隱形截擊機</p>
+            </div>
+            <div class="asset-card">
+              <img src="assets/enemy_destroyer.jpg" alt="Destroyer">
+              <p>🛡️ 重裝驅逐艦</p>
+            </div>
+            <div class="asset-card" style="border-color: var(--neon-pink);">
+              <img src="assets/boss_mothership.jpg" alt="Boss Mothership">
+              <p style="color: var(--neon-pink);">👾 異形母艦</p>
+            </div>
+          </div>
+
+          <div class="btn-group">
+            <button class="cyber-btn" id="start-btn">開始遊戲 (START GAME)</button>
+            <button class="cyber-btn" id="audio-toggle-btn" style="border-color: var(--neon-pink); font-size: 0.9rem;">音效音樂: 開啟</button>
+          </div>
+          <div style="margin-top: 25px; font-size: 0.85rem; color: #8085a0; text-align: left; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px;">
+            <p style="color: var(--neon-cyan); font-weight: bold; margin-bottom: 4px;">🎮 操作說明 (CONTROLS):</p>
+            <p>• [WASD / 方向鍵] 戰機移動 | [空白鍵 Space] 發射雷射</p>
+            <p>• [B 鍵 / 右鍵] 施放 EMP 戰術核彈</p>
+            <p>• [滑鼠移動] 亦可直接精準瞄準引導戰機</p>
+            <p>• 💡 擊落敵機救援被牽引光束捕獲的戰機可開啟【雙機合體模式】！</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wave Upgrade Shop Modal -->
+      <div id="upgrade-modal" class="ui-modal">
+        <div class="modal-content" style="max-width: 650px;">
+          <h2 style="font-family: var(--font-heading); color: var(--neon-gold); font-size: 2rem;">WAVE CLEARED!</h2>
+          <p style="color: #a0a5c0; margin-bottom: 15px;">選擇一項戰術模組升級：</p>
+          <div class="upgrade-grid" id="upgrade-options">
+            <!-- Dynamically populated -->
+          </div>
+          <button class="cyber-btn" id="next-wave-btn" style="margin-top: 10px;">進入下一波次 🚀</button>
+        </div>
+      </div>
+
+      <!-- Game Over Modal -->
+      <div id="gameover-modal" class="ui-modal">
+        <div class="modal-content">
+          <h2 style="font-family: var(--font-heading); color: var(--neon-red); font-size: 2.5rem; text-shadow: 0 0 15px var(--neon-red);">MISSION FAILED</h2>
+          <p style="font-size: 1.2rem; margin: 15px 0;">最終得分: <span id="final-score" style="color: var(--neon-gold); font-weight: bold;">0</span></p>
+          <div class="btn-group">
+            <button class="cyber-btn" id="restart-btn">再次挑戰 (RETRY)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pause Modal -->
+      <div id="pause-modal" class="ui-modal">
+        <div class="modal-content">
+          <h2 style="font-family: var(--font-heading); color: var(--neon-cyan); font-size: 2.2rem;">GAME PAUSED</h2>
+          <div class="btn-group" style="margin-top: 20px;">
+            <button class="cyber-btn" id="resume-btn">繼續遊戲 (RESUME)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Touch Controls for Mobile -->
+      <div id="touch-controls">
+        <div class="touch-btn" id="touch-left">◄</div>
+        <div class="touch-btn" id="touch-right">►</div>
+        <div class="touch-btn" id="touch-fire" style="background: rgba(255, 0, 127, 0.3); border-color: var(--neon-pink);">🔥</div>
+        <div class="touch-btn" id="touch-bomb" style="background: rgba(121, 40, 202, 0.3); border-color: var(--neon-purple);">💣</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Scripts -->
+  <script src="js/audio.js"></script>
+  <script src="js/vfx.js"></script>
+  <script src="js/renderers.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/gameplay.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
