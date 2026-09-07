@@ -57,19 +57,29 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle Canvas Resizing
   function resizeCanvas() {
     const rect = wrapper.getBoundingClientRect();
-    const width = rect.width || window.innerWidth || 1024;
-    const height = rect.height || window.innerHeight || 768;
+
+    // ★ 遊戲邏輯尺寸：使用 CSS 顯示尺寸
+    const width = Math.round(rect.width || window.innerWidth || 1024);
+    const height = Math.round(rect.height || window.innerHeight || 768);
+
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
+    // ★ 實際 Canvas 像素
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
 
+    // ★ Canvas 顯示尺寸
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    // ★ 使用 CSS 尺寸作為遊戲座標系
     if (gameEngine) {
-      gameEngine.width = canvas.width;
-      gameEngine.height = canvas.height;
+      gameEngine.width = width;
+      gameEngine.height = height;
+
       if (gameEngine.waveManager) {
-        gameEngine.waveManager.canvasWidth = canvas.width;
-        gameEngine.waveManager.canvasHeight = canvas.height;
+        gameEngine.waveManager.canvasWidth = width;
+        gameEngine.waveManager.canvasHeight = height;
       }
     }
   }
