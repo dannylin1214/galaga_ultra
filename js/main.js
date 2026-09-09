@@ -56,23 +56,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Handle Canvas Resizing
   function resizeCanvas() {
+    if (!wrapper || !canvas) return;
+
     const rect = wrapper.getBoundingClientRect();
 
-    // ★ 遊戲邏輯尺寸：使用 CSS 顯示尺寸
-    const width = Math.round(rect.width || window.innerWidth || 1024);
-    const height = Math.round(rect.height || window.innerHeight || 768);
+    const width = Math.max(
+      1,
+      Math.round(rect.width || window.innerWidth || 1024)
+    );
+
+    const height = Math.max(
+      1,
+      Math.round(rect.height || window.innerHeight || 768)
+    );
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    // ★ 實際 Canvas 像素
+    // Canvas 實際繪圖像素
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
 
-    // ★ Canvas 顯示尺寸
+    // Canvas CSS 顯示尺寸
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
-    // ★ 使用 CSS 尺寸作為遊戲座標系
+    // ★ Canvas 繪圖座標仍使用 CSS 尺寸
+    const ctx = canvas.getContext('2d');
+
+    if (ctx) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
     if (gameEngine) {
       gameEngine.width = width;
       gameEngine.height = height;
@@ -102,10 +116,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (gameEngine) {
       window.gameEngine = gameEngine;
-      gameEngine.width = canvas.width;
-      gameEngine.height = canvas.height;
-      //gameEngine.createPlayer();
-      //gameEngine.createEnemies();
+
+      // ★ 遊戲邏輯尺寸使用 CSS 顯示尺寸
+      const rect = wrapper.getBoundingClientRect();
+      gameEngine.width = Math.round(rect.width);
+      gameEngine.height = Math.round(rect.height);
+
       gameEngine.start();
     }
   });
