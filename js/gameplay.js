@@ -94,35 +94,65 @@
     setupTouchListeners() {
       if (!this.canvas) return;
 
+      const getTouchPosition = (touch) => {
+        const rect = this.canvas.getBoundingClientRect();
+
+        // 將手機觸控座標轉換成 Canvas CSS 座標
+        const scaleX = this.canvas.clientWidth / rect.width;
+        const scaleY = this.canvas.clientHeight / rect.height;
+
+        return {
+          x: (touch.clientX - rect.left) * scaleX,
+          y: (touch.clientY - rect.top) * scaleY
+        };
+      };
+
       this.canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
+
+        if (!e.touches.length) return;
+
         this.inputState.controlMode = 'TOUCH';
         this.inputState.fire = true;
-        if (e.touches.length > 0) {
-          const rect = this.canvas.getBoundingClientRect();
-          this.inputState.movePos = {
-            x: e.touches[0].clientX - rect.left,
-            y: e.touches[0].clientY - rect.top
-          };
-        }
+
+        const pos = getTouchPosition(e.touches[0]);
+
+        this.inputState.movePos = {
+          x: pos.x,
+          y: pos.y
+        };
+
       }, { passive: false });
+
 
       this.canvas.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        if (e.touches.length > 0) {
-          const rect = this.canvas.getBoundingClientRect();
-          this.inputState.movePos = {
-            x: e.touches[0].clientX - rect.left,
-            y: e.touches[0].clientY - rect.top
-          };
-        }
+
+        if (!e.touches.length) return;
+
+        const pos = getTouchPosition(e.touches[0]);
+
+        this.inputState.movePos = {
+          x: pos.x,
+          y: pos.y
+        };
+
       }, { passive: false });
+
 
       this.canvas.addEventListener('touchend', (e) => {
         e.preventDefault();
-        if (e.touches.length === 0) {
-          this.inputState.fire = false;
-        }
+
+        this.inputState.fire = false;
+
+      }, { passive: false });
+
+
+      this.canvas.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+
+        this.inputState.fire = false;
+
       }, { passive: false });
     }
   }
