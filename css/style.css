@@ -588,3 +588,21 @@ canvas#gameCanvas {
     touch-action: none;
   }
 }
+/* ================================
+   Mobile Touch Control Fix
+   ================================ */
+
+html,
+body {
+    overscroll-behavior: none;
+    touch-action: none;
+}
+
+#app-container,
+#canvas-wrapper,
+#gameCanvas {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
