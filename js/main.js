@@ -35,15 +35,23 @@ document.addEventListener('DOMContentLoaded', () => {
   let gameEngine = null;
   let isAudioEnabled = true;
 
-  // Initialize Web Audio Synth on user interaction
+  // ==========================================
+  // Audio
+  // ==========================================
+
   function initAudio() {
     if (!audioSynth && (window.GalagaAudio || window.WebAudioSynthesizer)) {
-      const AudioClass = (window.GalagaAudio && window.GalagaAudio.AudioSynthesizer) || window.WebAudioSynthesizer;
+      const AudioClass =
+        (window.GalagaAudio &&
+          window.GalagaAudio.AudioSynthesizer) ||
+        window.WebAudioSynthesizer;
+
       if (AudioClass) {
         audioSynth = new AudioClass();
         audioSynth.init();
       }
     }
+
     if (audioSynth) {
       if (isAudioEnabled) {
         audioSynth.ensureContext();
@@ -54,7 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Handle Canvas Resizing
+  // ==========================================
+  // Canvas Resize
+  // ==========================================
+
   function resizeCanvas() {
     if (!wrapper || !canvas) return;
 
@@ -70,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
       Math.round(rect.height || window.innerHeight || 768)
     );
 
+    // ★ Device Pixel Ratio
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     // Canvas 實際繪圖像素
@@ -80,7 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
-    // ★ Canvas 繪圖座標仍使用 CSS 尺寸
+    // ★★★ 重要 ★★★
+    // 遊戲邏輯仍使用 CSS 尺寸，
+    // 不使用 canvas.width / canvas.height 當遊戲座標。
     const ctx = canvas.getContext('2d');
 
     if (ctx) {
@@ -99,10 +113,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   window.addEventListener('resize', resizeCanvas);
+
+  // ★ 手機旋轉
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      resizeCanvas();
+    }, 150);
+  });
+
   resizeCanvas();
 
+  // ==========================================
   // Start Game
+  // ==========================================
+
   startBtn.addEventListener('click', () => {
+
     startModal.classList.remove('active');
     startModal.style.display = 'none';
 
@@ -110,118 +136,279 @@ document.addEventListener('DOMContentLoaded', () => {
     initAudio();
 
     if (!gameEngine && window.GalagaGameplay) {
-      gameEngine = new window.GalagaGameplay.GalagaGameEngine(canvas);
+
+      gameEngine =
+        new window.GalagaGameplay.GalagaGameEngine(canvas);
+
       gameEngine.audioSynth = audioSynth;
     }
 
     if (gameEngine) {
+
       window.gameEngine = gameEngine;
 
-      // ★ 遊戲邏輯尺寸使用 CSS 顯示尺寸
+      // ★ 使用 CSS 顯示尺寸
       const rect = wrapper.getBoundingClientRect();
+
       gameEngine.width = Math.round(rect.width);
       gameEngine.height = Math.round(rect.height);
+
+      // ★ 同步 WaveManager
+      if (gameEngine.waveManager) {
+        gameEngine.waveManager.canvasWidth =
+          gameEngine.width;
+
+        gameEngine.waveManager.canvasHeight =
+          gameEngine.height;
+      }
 
       gameEngine.start();
     }
   });
 
-  // Toggle Audio
+  // ==========================================
+  // Audio Toggle
+  // ==========================================
+
   audioToggleBtn.addEventListener('click', () => {
+
     isAudioEnabled = !isAudioEnabled;
-    audioToggleBtn.textContent = `音效音樂: ${isAudioEnabled ? '開啟' : '關閉'}`;
+
+    audioToggleBtn.textContent =
+      `音效音樂: ${isAudioEnabled ? '開啟' : '關閉'}`;
+
     if (audioSynth) {
       audioSynth.setMute(!isAudioEnabled);
     }
   });
 
-  // Restart Game
+  // ==========================================
+  // Restart
+  // ==========================================
+
   restartBtn.addEventListener('click', () => {
+
     gameoverModal.classList.remove('active');
     gameoverModal.style.display = 'none';
+
     if (gameEngine) {
+      resizeCanvas();
       gameEngine.restart();
     }
   });
 
-  // Resume Game
+  // ==========================================
+  // Resume
+  // ==========================================
+
   resumeBtn.addEventListener('click', () => {
+
     pauseModal.classList.remove('active');
     pauseModal.style.display = 'none';
+
     if (gameEngine) {
       gameEngine.isPaused = false;
     }
   });
 
-  // Upgrade / Next Wave Modal
+  // ==========================================
+  // Next Wave
+  // ==========================================
+
   nextWaveBtn.addEventListener('click', () => {
+
     upgradeModal.classList.remove('active');
     upgradeModal.style.display = 'none';
+
     if (gameEngine && gameEngine.waveManager) {
-      gameEngine.waveManager.startNextWave(gameEngine.enemies);
+
+      gameEngine.waveManager.startNextWave(
+        gameEngine.enemies
+      );
+
       gameEngine.isPaused = false;
     }
   });
 
-  // HUD Update Interval
+  // ==========================================
+  // HUD Update
+  // ==========================================
+
   setInterval(() => {
+
     if (!gameEngine) return;
 
     try {
+
       if (gameEngine.scoreManager) {
-        const mult = gameEngine.scoreManager.comboMultiplier || gameEngine.scoreManager.multiplier || 1.0;
-        scoreVal.textContent = String(gameEngine.scoreManager.score || 0).padStart(6, '0');
-        highScoreVal.textContent = String(gameEngine.scoreManager.highScore || 0).padStart(6, '0');
-        multiplierVal.textContent = `MULTIPLIER x${mult.toFixed(1)}`;
+
+        const mult =
+          gameEngine.scoreManager.comboMultiplier ||
+          gameEngine.scoreManager.multiplier ||
+          1.0;
+
+        if (scoreVal) {
+          scoreVal.textContent =
+            String(
+              gameEngine.scoreManager.score || 0
+            ).padStart(6, '0');
+        }
+
+        if (highScoreVal) {
+          highScoreVal.textContent =
+            String(
+              gameEngine.scoreManager.highScore || 0
+            ).padStart(6, '0');
+        }
+
+        if (multiplierVal) {
+          multiplierVal.textContent =
+            `MULTIPLIER x${mult.toFixed(1)}`;
+        }
       }
 
-      if (gameEngine.waveManager) {
-        waveVal.textContent = `WAVE ${gameEngine.waveManager.currentWave || 1}`;
+      if (gameEngine.waveManager && waveVal) {
+
+        waveVal.textContent =
+          `WAVE ${
+            gameEngine.waveManager.currentWave || 1
+          }`;
       }
 
       if (gameEngine.player) {
+
         const p = gameEngine.player;
-        const hpVal = p.health !== undefined ? p.health : (p.hp !== undefined ? p.hp : 100);
-        const maxHpVal = p.maxHealth !== undefined ? p.maxHealth : (p.maxHp !== undefined ? p.maxHp : 100);
-        const hpPct = Math.max(0, Math.min(100, (hpVal / maxHpVal) * 100));
 
-        const shVal = p.shieldHp !== undefined ? p.shieldHp : (p.shield !== undefined ? p.shield : 0);
-        const maxShVal = p.shieldMaxHp !== undefined ? p.shieldMaxHp : (p.maxShield !== undefined ? p.maxShield : 50);
-        const shieldPct = p.hasShield ? Math.max(0, Math.min(100, (shVal / maxShVal) * 100)) : 0;
+        const hpVal =
+          p.health !== undefined
+            ? p.health
+            : (p.hp !== undefined ? p.hp : 100);
 
-        healthBar.style.width = `${hpPct}%`;
-        shieldBar.style.width = `${shieldPct}%`;
+        const maxHpVal =
+          p.maxHealth !== undefined
+            ? p.maxHealth
+            : (p.maxHp !== undefined ? p.maxHp : 100);
 
-        const empPct = ((gameEngine.empNukesCount || 0) / 3) * 100;
-        energyBar.style.width = `${empPct}%`;
+        const hpPct =
+          Math.max(
+            0,
+            Math.min(
+              100,
+              (hpVal / maxHpVal) * 100
+            )
+          );
 
-        weaponTypeBadge.textContent = p.weaponType ? p.weaponType.toUpperCase() : 'LASER V1';
-        modeBadge.textContent = p.isDualFighter ? '🔥 DUAL FIGHTERS' : 'SINGLE JET';
+        const shVal =
+          p.shieldHp !== undefined
+            ? p.shieldHp
+            : (p.shield !== undefined ? p.shield : 0);
+
+        const maxShVal =
+          p.shieldMaxHp !== undefined
+            ? p.shieldMaxHp
+            : (p.maxShield !== undefined ? p.maxShield : 50);
+
+        const shieldPct =
+          p.hasShield
+            ? Math.max(
+                0,
+                Math.min(
+                  100,
+                  (shVal / maxShVal) * 100
+                )
+              )
+            : 0;
+
+        if (healthBar) {
+          healthBar.style.width =
+            `${hpPct}%`;
+        }
+
+        if (shieldBar) {
+          shieldBar.style.width =
+            `${shieldPct}%`;
+        }
+
+        const empPct =
+          ((gameEngine.empNukesCount || 0) / 3) * 100;
+
+        if (energyBar) {
+          energyBar.style.width =
+            `${empPct}%`;
+        }
+
+        if (weaponTypeBadge) {
+          weaponTypeBadge.textContent =
+            p.weaponType
+              ? p.weaponType.toUpperCase()
+              : 'LASER V1';
+        }
+
+        if (modeBadge) {
+          modeBadge.textContent =
+            p.isDualFighter
+              ? '🔥 DUAL FIGHTERS'
+              : 'SINGLE JET';
+        }
       }
 
-      // Modal Trigger Sync
-      if (gameEngine.isGameOver && !gameoverModal.classList.contains('active')) {
-        const finalScoreEl = document.getElementById('final-score');
-        if (finalScoreEl) finalScoreEl.textContent = gameEngine.scoreManager ? gameEngine.scoreManager.score : 0;
+      // Game Over Modal
+      if (
+        gameEngine.isGameOver &&
+        !gameoverModal.classList.contains('active')
+      ) {
+
+        const finalScoreEl =
+          document.getElementById('final-score');
+
+        if (finalScoreEl) {
+          finalScoreEl.textContent =
+            gameEngine.scoreManager
+              ? gameEngine.scoreManager.score
+              : 0;
+        }
+
         gameoverModal.classList.add('active');
         gameoverModal.style.display = 'flex';
       }
+
     } catch (err) {
-      console.error('HUD interval update error:', err);
+
+      console.error(
+        'HUD interval update error:',
+        err
+      );
+
     }
+
   }, 100);
 
-  // Keyboard Shortcuts (P for Pause, M for Mute)
+  // ==========================================
+  // Keyboard Shortcuts
+  // ==========================================
+
   window.addEventListener('keydown', (e) => {
-    if (e.key.toLowerCase() === 'p' && gameEngine) {
-      gameEngine.isPaused = !gameEngine.isPaused;
+
+    if (
+      e.key.toLowerCase() === 'p' &&
+      gameEngine
+    ) {
+
+      gameEngine.isPaused =
+        !gameEngine.isPaused;
+
       if (gameEngine.isPaused) {
+
         pauseModal.classList.add('active');
         pauseModal.style.display = 'flex';
+
       } else {
+
         pauseModal.classList.remove('active');
         pauseModal.style.display = 'none';
+
       }
     }
   });
+
 });
