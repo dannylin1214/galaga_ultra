@@ -15,6 +15,15 @@
   class ControlsManager {
     constructor(canvasElement) {
       this.canvas = canvasElement;
+      // ★ 由 GalagaGameEngine 同步目前的 Player
+      this.player = null;
+
+      // ★ 手機相對拖曳控制
+      this.touchActive = false;
+      this.touchStartX = 0;
+      this.touchStartY = 0;
+      this.touchPlayerStartX = 0;
+      this.touchPlayerStartY = 0;
       this.inputState = {
         left: false,
         right: false,
@@ -94,66 +103,150 @@
     setupTouchListeners() {
       if (!this.canvas) return;
 
+      // ==========================================
+      // ★ Mobile Relative Drag Control
+      // ==========================================
+
       const getTouchPosition = (touch) => {
-        const rect = this.canvas.getBoundingClientRect();
 
-        // 將手機觸控座標轉換成 Canvas CSS 座標
-        const scaleX = this.canvas.clientWidth / rect.width;
-        const scaleY = this.canvas.clientHeight / rect.height;
+        const rect =
+          this.canvas.getBoundingClientRect();
 
+        // ★ 使用 Canvas CSS 顯示尺寸
+        // 不使用 canvas.width / canvas.height
+        // 避免 devicePixelRatio 造成座標放大。
         return {
-          x: (touch.clientX - rect.left) * scaleX,
-          y: (touch.clientY - rect.top) * scaleY
+          x: touch.clientX - rect.left,
+          y: touch.clientY - rect.top
         };
       };
 
-      this.canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
+      // ==========================================
+      // Touch Start
+      // ==========================================
 
-        if (!e.touches.length) return;
+      this.canvas.addEventListener(
+        'touchstart',
+        (e) => {
 
-        this.inputState.controlMode = 'TOUCH';
-        this.inputState.fire = true;
+          e.preventDefault();
 
-        const pos = getTouchPosition(e.touches[0]);
+          if (!e.touches.length) return;
 
-        this.inputState.movePos = {
-          x: pos.x,
-          y: pos.y
-        };
+          this.inputState.controlMode = 'TOUCH';
+          this.inputState.fire = true;
 
-      }, { passive: false });
+          this.touchActive = true;
 
+          const pos =
+            getTouchPosition(e.touches[0]);
 
-      this.canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
+          // ★ 記住手指起始位置
+          this.touchStartX = pos.x;
+          this.touchStartY = pos.y;
 
-        if (!e.touches.length) return;
+          // ★ 記住戰機目前位置
+          // 防止第一次觸碰時戰機瞬移
+          if (
+            this.player &&
+            this.player.pos
+          ) {
 
-        const pos = getTouchPosition(e.touches[0]);
+            this.touchPlayerStartX =
+              this.player.pos.x;
 
-        this.inputState.movePos = {
-          x: pos.x,
-          y: pos.y
-        };
+            this.touchPlayerStartY =
+              this.player.pos.y;
 
-      }, { passive: false });
+          } else {
 
+            this.touchPlayerStartX =
+              pos.x;
 
-      this.canvas.addEventListener('touchend', (e) => {
-        e.preventDefault();
+            this.touchPlayerStartY =
+              pos.y;
+          }
 
-        this.inputState.fire = false;
+          // ★ 初始位置保持戰機原本的位置
+          this.inputState.movePos = {
+            x: this.touchPlayerStartX,
+            y: this.touchPlayerStartY
+          };
 
-      }, { passive: false });
+        },
+        { passive: false }
+      );
 
+      // ==========================================
+      // Touch Move
+      // ==========================================
 
-      this.canvas.addEventListener('touchcancel', (e) => {
-        e.preventDefault();
+      this.canvas.addEventListener(
+        'touchmove',
+        (e) => {
 
-        this.inputState.fire = false;
+          e.preventDefault();
 
-      }, { passive: false });
+          if (
+            !e.touches.length ||
+            !this.touchActive
+          ) {
+            return;
+          }
+
+          const pos =
+            getTouchPosition(e.touches[0]);
+
+          // ★ 手指移動多少，戰機就跟著移動多少
+          const dx =
+            pos.x - this.touchStartX;
+
+          const dy =
+            pos.y - this.touchStartY;
+
+          this.inputState.movePos = {
+            x: this.touchPlayerStartX + dx,
+            y: this.touchPlayerStartY + dy
+          };
+
+        },
+        { passive: false }
+      );
+
+      // ==========================================
+      // Touch End
+      // ==========================================
+
+      this.canvas.addEventListener(
+        'touchend',
+        (e) => {
+
+          e.preventDefault();
+
+          this.touchActive = false;
+
+          this.inputState.fire = false;
+
+          this.inputState.movePos = null;
+
+        },
+        { passive: false }
+      );
+
+      // ==========================================
+      // Touch Cancel
+      // ==========================================
+
+      this.canvas.addEventListener(
+        'touchcancel',
+        (e) => {
+          e.preventDefault();
+          this.touchActive = false;
+          this.inputState.fire = false;
+          this.inputState.movePos = null;
+        },
+        { passive: false }
+      );
     }
   }
 
@@ -376,15 +469,68 @@
       this.canvas = typeof canvasId === 'string' ? document.getElementById(canvasId) : canvasId;
       if (!this.canvas) return;
 
+      //this.ctx = this.canvas.getContext('2d');
+      //this.width = (this.canvas.width && this.canvas.width > 0) ? this.canvas.width : (window.innerWidth || 1024);
+      //this.height = (this.canvas.height && this.canvas.height > 0) ? this.canvas.height : (window.innerHeight || 768);
       this.ctx = this.canvas.getContext('2d');
-      this.width = (this.canvas.width && this.canvas.width > 0) ? this.canvas.width : (window.innerWidth || 1024);
-      this.height = (this.canvas.height && this.canvas.height > 0) ? this.canvas.height : (window.innerHeight || 768);
 
+      // ==========================================
+      // ★ IMPORTANT
+      // Game logical size = CSS display size
+      //
+      // 不使用 canvas.width / canvas.height
+      // 因為手機 Retina / DPR 會讓實體像素變成
+      // CSS 尺寸的 2 倍、3 倍甚至更高。
+      // ==========================================
+
+      const rect =
+        this.canvas.getBoundingClientRect();
+
+      this.width = Math.max(
+        1,
+        Math.round(
+          rect.width ||
+          this.canvas.clientWidth ||
+          window.innerWidth ||
+          1024
+        )
+      );
+
+      this.height = Math.max(
+        1,
+        Math.round(
+          rect.height ||
+          this.canvas.clientHeight ||
+          window.innerHeight ||
+          768
+        )
+      );
       // Systems
-      this.controls = new ControlsManager(this.canvas);
-      this.scoreManager = new ScoreComboManager();
-      this.waveManager = new WaveManager(this.width, this.height);
-      this.player = new PlayerShip(this.width, this.height);
+      //this.controls = new ControlsManager(this.canvas);
+      //this.scoreManager = new ScoreComboManager();
+      //this.waveManager = new WaveManager(this.width, this.height);
+      //this.player = new PlayerShip(this.width, this.height);
+      this.controls =
+        new ControlsManager(this.canvas);
+
+      this.scoreManager =
+        new ScoreComboManager();
+
+      this.waveManager =
+        new WaveManager(
+          this.width,
+          this.height
+        );
+
+      this.player =
+        new PlayerShip(
+          this.width,
+          this.height
+        );
+
+      // ★ 讓 ControlsManager 知道目前戰機的位置
+      this.controls.player =
+        this.player;
 
       // Entity Collections
       this.enemies = [];
@@ -420,7 +566,21 @@
       } else {
         this.player.resetPosition(w, h);
       }
-      this.player.pos.set(w / 2, h - 90);
+      //this.player.pos.set(w / 2, h - 90);
+      //this.player.isDead = false;
+      //this.player.isCaptured = false;
+      this.player.pos.set(
+        w / 2,
+        h - 90
+      );
+
+      // ★ 戰機重新建立／重生後
+      // 重新同步給手機觸控控制器
+      if (this.controls) {
+        this.controls.player =
+          this.player;
+      }
+
       this.player.isDead = false;
       this.player.isCaptured = false;
       return this.player;
